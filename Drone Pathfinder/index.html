@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drone Pathfinder</title>
+    <script>
+      (function () {
+        if (location.protocol !== "file:") return;
+        var dest = "http://127.0.0.1:8765/";
+        fetch(dest, { mode: "no-cors", cache: "no-store" })
+          .then(function () {
+            location.replace(dest);
+          })
+          .catch(function () {
+            window.__farmServerDown = true;
+          });
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="file-origin-banner" hidden style="margin:16px;padding:12px 14px;border-radius:10px;background:#2a2210;color:#f4c15d;font-family:Segoe UI,system-ui,sans-serif;">
+      This page was opened as a local file, which Chrome blocks inside a preview frame.
+      Double-click <strong>start-farm.bat</strong>, then open
+      <a href="http://127.0.0.1:8765/" style="color:#3ee0b0">http://127.0.0.1:8765/</a>.
+    </div>
+    <script>
+      (function () {
+        if (location.protocol !== "file:") return;
+        function showBanner() {
+          var el = document.getElementById("file-origin-banner");
+          if (el && window.__farmServerDown) el.hidden = false;
+        }
+        document.addEventListener("DOMContentLoaded", showBanner);
+        setTimeout(function () {
+          if (location.protocol === "file:") {
+            window.__farmServerDown = true;
+            showBanner();
+          }
+        }, 1500);
+      })();
+    </script>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>Drone Pathfinder</h1>
+            <p>Clear rocks and weeds first, then transplant crop into the soil.</p>
+          </div>
+        </div>
+        <div class="status-pills">
+          <span class="pill" id="phase-pill">Idle</span>
+          <span class="pill muted" id="rock-pill">0 rocks</span>
+          <span class="pill muted" id="weed-pill">0 weeds</span>
+          <span class="pill muted" id="pest-pill">0 pests</span>
+          <span class="pill muted" id="stand-pill">Stand —</span>
+          <span class="pill muted" id="fruit-pill">0 fruit</span>
+          <span class="pill muted" id="poll-pill">Poll —</span>
+          <span class="pill muted" id="season-pill">Spring · Planting</span>
+          <span class="pill muted" id="path-pill">Path —</span>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="stage">
+          <div class="viewport">
+            <canvas id="field" aria-label="3D rock field map"></canvas>
+            <aside class="farm-clock" aria-label="Farm growing clock">
+              <div class="clock-face">
+                <span class="clock-season s-spring">Spring</span>
+                <span class="clock-season s-summer">Summer</span>
+                <span class="clock-season s-fall">Fall</span>
+                <span class="clock-season s-winter">Winter</span>
+                <div class="clock-cycle">
+                  <span>Plant</span>
+                  <span>Grow</span>
+                  <span>Harvest</span>
+                  <span>Rest</span>
+                </div>
+                <div class="clock-hand-wrap" id="clock-hand">
+                  <span class="clock-hand"></span>
+                </div>
+                <div class="clock-hub"></div>
+              </div>
+              <div class="clock-readout">
+                <strong id="season-name">Spring</strong>
+                <span id="cycle-name">Planting &amp; emergence</span>
+              </div>
+            </aside>
+          </div>
+          <p class="hint" id="mode-hint">Unmaintained field: rocks and weeds only. Clear both before transplanting crop into the soil.</p>
+        </section>
+
+        <aside class="panel">
+          <h2>Field pathway</h2>
+          <label class="field">
+            <span>Field pathway</span>
+            <select id="field-select" aria-label="Field pathway">
+              <option value="">—</option>
+              <option value="field" selected>Unmaintained field</option>
+              <option value="rocks">Rock management</option>
+              <option value="weeds">Weed management</option>
+              <option value="irrigate">Irrigate</option>
+              <option value="pests">Pests &amp; Disease</option>
+              <option value="prepare">Prepare field</option>
+            </select>
+          </label>
+
+          <h2>Planting pathway</h2>
+          <label class="field">
+            <span>Select planting work</span>
+            <select id="planting-select">
+              <option value="" selected>—</option>
+              <option value="planting">Transplants</option>
+              <option value="stand">Stand counts</option>
+              <option value="poll1">Pollination week 1</option>
+              <option value="poll2">Pollination week 2</option>
+              <option value="poll3">Pollination week 3</option>
+              <option value="fruitcount">Fruit count</option>
+              <option value="harvest">Harvest</option>
+            </select>
+          </label>
+
+          <h2>Farm clock</h2>
+          <p class="hint" id="clock-year">Year 1 · Spring</p>
+          <div class="actions clock-actions">
+            <button id="btn-clock-play" type="button">Play year</button>
+            <button id="btn-clock-advance" type="button" class="ghost">Advance season</button>
+          </div>
+
+          <section class="mission-controls">
+          <h2>Mission controls</h2>
+          <label class="field">
+            <span>Rock count</span>
+            <input id="rock-count" type="range" min="4" max="100" value="12" />
+            <output id="rock-count-out">12</output>
+          </label>
+          <label class="field">
+            <span>Weed count</span>
+            <input id="weed-count" type="range" min="0" max="100" value="10" />
+            <output id="weed-count-out">10</output>
+          </label>
+          <label class="field">
+            <span>Seed planted (transplants)</span>
+            <input id="plant-count" type="range" min="12" max="100" value="36" />
+            <output id="plant-count-out">36</output>
+          </label>
+          <label class="field">
+            <span>Scan speed</span>
+            <input id="scan-speed" type="range" min="1" max="100" value="4" />
+            <output id="scan-speed-out">4</output>
+          </label>
+          <label class="field">
+            <span>Seed</span>
+            <input id="seed" type="number" min="1" max="100" value="100" />
+          </label>
+
+          <div class="actions">
+            <button id="btn-generate" type="button">Generate field</button>
+            <button id="btn-scan" type="button" class="primary">Scan field</button>
+            <button id="btn-pickup" type="button" data-for="rocks" disabled>Fly pickup path</button>
+            <button id="btn-treat" type="button" data-for="weeds irrigate" disabled>Treat weeds</button>
+            <button id="btn-treat-pests" type="button" data-for="pests irrigate" disabled>Treat pests &amp; disease</button>
+            <button id="btn-irrigate" type="button" data-for="irrigate">Fly irrigate path</button>
+            <button id="btn-treat-all" type="button" data-for="irrigate weeds pests" disabled>Treat weeds, pests, and diseases</button>
+            <button id="btn-prepare" type="button" data-for="prepare">Prepare field</button>
+            <button id="btn-stand" type="button" data-for="stand">Take stand count</button>
+            <button id="btn-transplant" type="button" data-for="planting" disabled>Transplant plants</button>
+            <button id="btn-pollinate" type="button" data-for="poll1 poll2 poll3" disabled>Pollinate plants</button>
+            <button id="btn-poll-count" type="button" data-for="poll1 poll2 poll3">Count pollinated plants</button>
+            <button id="btn-fruit-count" type="button" data-for="fruitcount">Count fruit</button>
+            <button id="btn-harvest" type="button" data-for="harvest">Harvest fruit</button>
+            <button id="btn-reset" type="button" class="ghost">Reset drone</button>
+          </div>
+          </section>
+
+          <div data-for="stand">
+            <h2>Stand count</h2>
+            <dl class="stats" id="stand-stats">
+              <div>
+                <dt>Counted</dt>
+                <dd id="stand-counted">0</dd>
+              </div>
+              <div>
+                <dt>Planted</dt>
+                <dd id="stand-planted">0</dd>
+              </div>
+              <div>
+                <dt>Stand</dt>
+                <dd id="stand-pct">—</dd>
+              </div>
+              <div>
+                <dt>Density</dt>
+                <dd id="stand-density">—</dd>
+              </div>
+            </dl>
+            <p class="hint" id="nutrition-note">Treat weeds to clear the field and raise the stand — crop plants emerge as weeds are removed. Irrigate to grow plants larger and add more stand.</p>
+          </div>
+
+          <div data-for="pests irrigate">
+            <h2>Pests &amp; Disease</h2>
+            <dl class="stats" id="pest-stats">
+              <div>
+                <dt>Pests</dt>
+                <dd id="pest-bugs">0</dd>
+              </div>
+              <div>
+                <dt>Disease</dt>
+                <dd id="pest-disease">0</dd>
+              </div>
+              <div>
+                <dt>Detected</dt>
+                <dd id="pest-detected">0</dd>
+              </div>
+              <div>
+                <dt>Treated</dt>
+                <dd id="pest-treated">0</dd>
+              </div>
+            </dl>
+            <p class="hint" id="pest-note">Scan to find pests and disease, then treat the field. Outbreaks increase with weeds and in winter.</p>
+          </div>
+
+          <div data-for="planting poll1 poll2 poll3 fruitcount harvest">
+            <h2>Planting</h2>
+            <dl class="stats" id="planting-stats">
+              <div>
+                <dt>Transplants</dt>
+                <dd id="plant-transplants">36</dd>
+              </div>
+              <div>
+                <dt>Flowering</dt>
+                <dd id="plant-flowering">0</dd>
+              </div>
+              <div>
+                <dt>Pollinated</dt>
+                <dd id="plant-pollinated">0 / 0</dd>
+              </div>
+              <div>
+                <dt>Fruit</dt>
+                <dd id="plant-fruit">0</dd>
+              </div>
+              <div>
+                <dt>Harvested</dt>
+                <dd id="plant-harvested">0</dd>
+              </div>
+            </dl>
+            <p class="hint" id="planting-note">Seed planted under Mission controls is the transplant count. Selecting Transplants plants that many plants in field rows. Then fly pollination weeks 1–3. Fruit count totals fruit; Harvest removes it.</p>
+          </div>
+
+          <h2>Mission log</h2>
+          <ol id="log" class="log"></ol>
+
+          <h2>How it works</h2>
+          <ul class="notes">
+            <li>The map starts as an unmaintained field: rocks and weeds only. Transplants go in the soil only after the field is clear of rocks and weeds, in visible field rows.</li>
+            <li>Field pathway covers rock pickup, weed treatment, irrigation, pests &amp; disease, and prepare field. Prepare field clears weeds and planted crop, then lays soil rows for planting. Treating weeds and irrigating both raise the stand. Each irrigate pass also makes crop plants grow larger, then sprouts more weeds, pests, and disease — treat them from the same pathway. If pests and disease are not treated, stand count falls after two irrigations.</li>
+            <li>Pollination is sequential: week 1 flowers, week 2 pollinates, week 3 sets fruit. Count pollinated plants reports how many of the stand are pollinated (week 2 or later). Fruit count totals fruit and leaves it on the plants. Harvest removes fruit.</li>
+            <li>After pesticide, treated weeds are removed so only standing crop remains.</li>
+            <li>The farm clock grows plants with the seasons — small in spring, leafy in summer, fruiting in fall, dormant in winter.</li>
+          </ul>
+        </aside>
+      </main>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
