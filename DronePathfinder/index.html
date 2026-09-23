@@ -176,6 +176,36 @@
           </div>
           </section>
 
+          <div data-for="rocks">
+            <h2>Rock management</h2>
+            <dl class="stats" id="rock-stats">
+              <div>
+                <dt>Rocks left</dt>
+                <dd id="rock-left">0</dd>
+              </div>
+              <div>
+                <dt>Pickup time</dt>
+                <dd id="pickup-time">—</dd>
+              </div>
+            </dl>
+            <p class="hint" id="pickup-note">Pickup time is how long it takes to collect every rock still on the field. More rocks means a longer pickup.</p>
+          </div>
+
+          <div data-for="weeds">
+            <h2>Weed management</h2>
+            <dl class="stats" id="weed-stats">
+              <div>
+                <dt>Weeds left</dt>
+                <dd id="weed-left">0</dd>
+              </div>
+              <div>
+                <dt>Treatment time</dt>
+                <dd id="treat-time">—</dd>
+              </div>
+            </dl>
+            <p class="hint" id="treat-note">Treatment time is how long it takes to treat every weed still on the field. More weeds means a longer treatment.</p>
+          </div>
+
           <div data-for="stand">
             <h2>Stand count</h2>
             <dl class="stats" id="stand-stats">
@@ -255,7 +285,7 @@
           <h2>How it works</h2>
           <ul class="notes">
             <li>The map starts as an unmaintained field: rocks and weeds only. Transplants go in the soil only after the field is clear of rocks and weeds, in visible field rows.</li>
-            <li>Field pathway covers rock pickup, weed treatment, irrigation, pests &amp; disease, and prepare field. Prepare field clears weeds and planted crop, then lays soil rows for planting. Treating weeds and irrigating both raise the stand. Each irrigate pass also makes crop plants grow larger, then sprouts more weeds, pests, and disease — treat them from the same pathway. If pests and disease are not treated, stand count falls after two irrigations.</li>
+            <li>Field pathway covers rock pickup, weed treatment, irrigation, pests &amp; disease, and prepare field. Pickup time grows with the rocks left to collect. Treatment time grows with the weeds left to treat. Prepare field clears weeds and planted crop, then lays soil rows for planting. Treating weeds and irrigating both raise the stand. Each irrigate pass also makes crop plants grow larger, then sprouts more weeds, pests, and disease — treat them from the same pathway. If pests and disease are not treated, stand count falls after two irrigations.</li>
             <li>Pollination is sequential: week 1 flowers, week 2 pollinates, week 3 sets fruit. Count pollinated plants reports how many of the stand are pollinated (week 2 or later). Fruit count totals fruit and leaves it on the plants. Harvest removes fruit.</li>
             <li>After pesticide, treated weeds are removed so only standing crop remains.</li>
             <li>The farm clock grows plants with the seasons — small in spring, leafy in summer, fruiting in fall, dormant in winter.</li>

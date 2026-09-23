@@ -290,6 +290,8 @@ const IRRIGATE_EMERGE_MAX = 12;
 const IRRIGATE_WEED_FRAC = 0.32;
 const IRRIGATE_WEED_MIN = 3;
 const IRRIGATE_PEST_MIN = 3;
+const PICKUP_SEC_PER_ROCK = 45;
+const TREAT_SEC_PER_WEED = 36;
 
 function currentSeasonIndex() {
   return Math.min(3, Math.floor(((state.yearProgress % 1) + 1) % 1 * 4));
@@ -1509,6 +1511,37 @@ function removeAllRocksFromField() {
   return left;
 }
 
+function formatWorkTime(seconds) {
+  const total = Math.max(0, Math.round(seconds));
+  if (!total) return "0 min";
+  const min = Math.floor(total / 60);
+  const sec = total % 60;
+  if (!min) return `${sec} s`;
+  if (!sec) return `${min} min`;
+  return `${min} min ${sec} s`;
+}
+
+function pickupSeconds(rockCount) {
+  return Math.max(0, rockCount) * PICKUP_SEC_PER_ROCK;
+}
+
+function treatmentSeconds(weedCount) {
+  return Math.max(0, weedCount) * TREAT_SEC_PER_WEED;
+}
+
+function updateWorkTimes() {
+  const rocksLeft = remainingRocks().length;
+  const weedsLeft = livingWeeds().length;
+  const rockLeftEl = document.getElementById("rock-left");
+  const pickupTimeEl = document.getElementById("pickup-time");
+  const weedLeftEl = document.getElementById("weed-left");
+  const treatTimeEl = document.getElementById("treat-time");
+  if (rockLeftEl) rockLeftEl.textContent = String(rocksLeft);
+  if (pickupTimeEl) pickupTimeEl.textContent = formatWorkTime(pickupSeconds(rocksLeft));
+  if (weedLeftEl) weedLeftEl.textContent = String(weedsLeft);
+  if (treatTimeEl) treatTimeEl.textContent = formatWorkTime(treatmentSeconds(weedsLeft));
+}
+
 function updateCounts() {
   const collected = state.rocks.filter((r) => r.collected).length;
   const remaining = state.rocks.filter((r) => !r.collected).length;
@@ -1521,6 +1554,7 @@ function updateCounts() {
   weedPill.textContent = liveWeeds.length
     ? `${weedsFound} / ${liveWeeds.length} weeds`
     : "weeds cleared";
+  updateWorkTimes();
   const livePests = livingPests();
   const pestsFound = livePests.filter((p) => p.detected).length;
   const pestBugs = livePests.filter((p) => p.kind !== "disease").length;
@@ -2069,7 +2103,11 @@ function planPickup() {
   }
   const tour = planTour(detected);
   pathPill.textContent = `Rocks ${tour.meters.toFixed(1)} m`;
-  log(`Shortest pickup tour: ${tour.stops} stops, ${tour.meters.toFixed(1)} m.`);
+  log(
+    `Shortest pickup tour: ${tour.stops} stops, ${tour.meters.toFixed(1)} m. Pickup time ${formatWorkTime(
+      pickupSeconds(tour.stops)
+    )}.`
+  );
   setPickupButtons();
   setPhase("planned");
   state.pickupPath = tour.closed;
@@ -2084,7 +2122,11 @@ function planWeedTreatment() {
     return [];
   }
   const tour = planTour(detected);
-  log(`Shortest weed-treatment tour: ${tour.stops} stops, ${tour.meters.toFixed(1)} m.`);
+  log(
+    `Shortest weed-treatment tour: ${tour.stops} stops, ${tour.meters.toFixed(1)} m. Treatment time ${formatWorkTime(
+      treatmentSeconds(tour.stops)
+    )}.`
+  );
   document.getElementById("btn-treat").disabled = false;
   state.weedPath = tour.closed;
   updateWeedPathLine();
